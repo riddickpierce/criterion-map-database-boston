@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/pierce/Downloads/criterion-map-database/map-sheets-sync/map-sheets-sync/**)",
+      "Bash(npm install *)",
+      "Bash(python3)",
+      "Bash(python3 -c ' *)",
+      "Bash(npm run *)",
+      "Bash(node scripts/build_rent_roll.js)"
+    ]
+  }
+}

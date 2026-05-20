@@ -8,6 +8,7 @@ const SearchBar = ({ layers, mapboxToken, onSelectFeature, onSelectPlace }) => {
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef(null);
   const inputRef = useRef(null);
+  const searchIdRef = useRef(0);
 
   useEffect(() => {
     const q = query.trim();
@@ -17,6 +18,8 @@ const SearchBar = ({ layers, mapboxToken, onSelectFeature, onSelectPlace }) => {
       setOpen(false);
       return;
     }
+
+    const searchId = ++searchIdRef.current;
 
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
@@ -53,6 +56,7 @@ const SearchBar = ({ layers, mapboxToken, onSelectFeature, onSelectPlace }) => {
         });
       });
 
+      if (searchId !== searchIdRef.current) return;
       setDataResults(matches.slice(0, 20));
 
       // Mapbox forward geocoding
@@ -61,6 +65,7 @@ const SearchBar = ({ layers, mapboxToken, onSelectFeature, onSelectPlace }) => {
         const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?access_token=${mapboxToken}&limit=5`;
         const res = await fetch(url);
         const json = await res.json();
+        if (searchId !== searchIdRef.current) return;
         setPlaceResults(
           (json.features || []).map(f => ({
             id: f.id,
@@ -70,6 +75,7 @@ const SearchBar = ({ layers, mapboxToken, onSelectFeature, onSelectPlace }) => {
           }))
         );
       } catch {
+        if (searchId !== searchIdRef.current) return;
         setPlaceResults([]);
       }
       setLoading(false);

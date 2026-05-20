@@ -146,6 +146,7 @@ const AddMarkerModal = ({ layers, coordinates, onSubmit, onCancel }) => {
           {formFields.map(fieldName => {
             const isAddressField =
               selectedLayer && fieldName === selectedLayer.config.addressColumn;
+            const sliderFilter = selectedLayer?.config.sliderFilters?.find(f => f.field === fieldName);
             return (
               <div key={fieldName} style={{ marginBottom: '10px' }}>
                 <label style={{
@@ -177,6 +178,11 @@ const AddMarkerModal = ({ layers, coordinates, onSubmit, onCancel }) => {
                     boxSizing: 'border-box'
                   }}
                 />
+                {sliderFilter?.type === 'date' && (
+                  <span style={{ fontSize: '10px', color: '#aaa', marginTop: '2px', display: 'block' }}>
+                    MM/DD/YYYY
+                  </span>
+                )}
               </div>
             );
           })}

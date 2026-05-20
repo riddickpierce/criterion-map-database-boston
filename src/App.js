@@ -166,7 +166,15 @@ function App() {
               }
             );
 
-            // Add geocoded features and save coordinates back to sheet sequentially
+            // Add geocoded features and collect coordinate cell updates for a single batch write
+            const coordUpdates = [];
+            const cacheKey = `${config.spreadsheetId}/${sheetConfig.name}`;
+            const sheetHeaders = googleSheetsService.headersCache[cacheKey] || [];
+            const latColIdx = sheetConfig.latColumn ? sheetHeaders.indexOf(sheetConfig.latColumn) : -1;
+            const lngColIdx = sheetConfig.lngColumn ? sheetHeaders.indexOf(sheetConfig.lngColumn) : -1;
+            const latColLetter = latColIdx >= 0 ? googleSheetsService.columnIndexToLetter(latColIdx) : null;
+            const lngColLetter = lngColIdx >= 0 ? googleSheetsService.columnIndexToLetter(lngColIdx) : null;
+
             for (let idx = 0; idx < geocoded.length; idx++) {
               const coords = geocoded[idx];
               if (!coords) continue;
@@ -180,19 +188,27 @@ function App() {
                 row[sheetConfig.latColumn] = coords.lat.toString();
                 row[sheetConfig.lngColumn] = coords.lng.toString();
 
-                if (!skipCoordWrite) {
-                  try {
-                    await googleSheetsService.updateRow(
-                      config.spreadsheetId,
-                      sheetConfig.name,
-                      rowIndex,
-                      row
-                    );
-                  } catch (err) {
-                    console.error(`Failed to save coordinates for row ${rowIndex} in ${sheetConfig.name}:`, err);
-                    throw Object.assign(new Error(err.message), { isCoordWriteError: true });
-                  }
+                if (!skipCoordWrite && latColLetter && lngColLetter) {
+                  const actualRow = rowIndex + 2; // 1-based + header row
+                  coordUpdates.push(
+                    { range: `${latColLetter}${actualRow}`, value: coords.lat.toString() },
+                    { range: `${lngColLetter}${actualRow}`, value: coords.lng.toString() }
+                  );
                 }
+              }
+            }
+
+            // Write all coordinates for this sheet in one API call instead of one per row
+            if (!skipCoordWrite && coordUpdates.length > 0) {
+              try {
+                await googleSheetsService.batchUpdateCells(
+                  config.spreadsheetId,
+                  sheetConfig.name,
+                  coordUpdates
+                );
+              } catch (err) {
+                console.error(`Failed to save coordinates in ${sheetConfig.name}:`, err);
+                throw Object.assign(new Error(err.message), { isCoordWriteError: true });
               }
             }
 
@@ -780,7 +796,8 @@ function App() {
           display: 'flex', alignItems: 'center', gap: '12px'
         }}>
           <span style={{ flex: 1 }}>
-            <strong>Warning:</strong> Could not save new coordinates to Google Sheets (quota exceeded). The map has loaded, but coordinates will need to be re-geocoded next time.
+            <strong>Warning:</strong> Could not save new coordinates to Google Sheets. The map has loaded, but coordinates will need to be re-geocoded next time.
+            {error && <span style={{ display: 'block', fontSize: '11px', color: '#856404', marginTop: '2px' }}>{error.replace('__COORD_WRITE_ERROR__', '')}</span>}
           </span>
           <button onClick={() => loadAllSheets(false)} style={{ padding: '4px 10px', cursor: 'pointer', backgroundColor: '#4E9A5A', color: 'white', border: 'none', borderRadius: '4px', fontSize: '12px' }}>
             Retry with saving

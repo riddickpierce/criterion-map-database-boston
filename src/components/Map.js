@@ -189,6 +189,7 @@ const Map = ({
 
     if (searchTarget.type === 'feature') {
       const { layer, feature, featureIndex } = searchTarget;
+      if (!feature.coordinates) return;
       const { lat, lng } = feature.coordinates;
 
       map.current.flyTo({ center: [lng, lat], zoom: Math.max(map.current.getZoom(), 14), speed: 1.4 });
@@ -406,7 +407,7 @@ const Map = ({
               const d = new Date(raw);
               val = isNaN(d.getTime()) ? null : d.getFullYear() * 100 + (d.getMonth() + 1);
             }
-            if (val === null || isNaN(val) || val < range.low || val > range.high) return;
+            if (val !== null && !isNaN(val) && (val < range.low || val > range.high)) return;
           }
         }
 
